@@ -29,9 +29,12 @@ def get_login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/login")
-def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    users = pd.read_csv("users.csv")
+def login(request: Request,
+          username: str = Form(...),
+          password: str = Form(...)):
+    users = pd.read_csv(USERS)
     if username in users['user'].values[0]:
         if str(users[users["user"] == username].values[0][1]) == password:
             session_id = str(uuid.uuid4())
             sessions[session_id] = datetime.now()
+            response = RedirectResponse(url=)
