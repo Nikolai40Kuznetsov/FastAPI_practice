@@ -6,7 +6,6 @@ import csv, os, uuid, hashlib
 import pandas as pd
 from datetime import datetime, timedelta
 
-
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), name = 'static')
 app.mount('/templates', StaticFiles(directory='templates'), name='templates')
