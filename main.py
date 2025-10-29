@@ -6,13 +6,14 @@ import csv, os, uuid, hashlib
 import pandas as pd
 from datetime import datetime, timedelta
 
+
 app = FastAPI()
 app.mount('/static', StaticFiles(directory='static'), name = 'static')
 app.mount('/templates', StaticFiles(directory='templates'), name='templates')
 app.mount('/sources', StaticFiles(directory='sources'), name='sources')
 templates = Jinja2Templates(directory = "templates")
 USERS = 'users.csv'
-SESSION_TTL = timedelta(minutes=1)
+SESSION_TTL = timedelta(minutes=3)
 sessions = {}
 white_urls = ["/", "/login", "/logout"]
 
@@ -28,7 +29,7 @@ async def check_session(request: Request, call_next):
     created_at = sessions[session_id]
     if datetime.now() - created_at > SESSION_TTL:
         del sessions[session_id]
-        return templates.TemplateResponse("login.html", {"request" : request, "message" : "Сессия завершена по истечении времени"}) # RedirectResponse(url="/login")
+        return templates.TemplateResponse("login.html", {"request" : request, "message" : "Сессия завершена по истечении времени"})
 
     return await call_next(request)
     
@@ -51,6 +52,7 @@ def login(request: Request,
     users = pd.read_csv(USERS)
     if username in users['user'].values[0]:
         if str(users[users["user"] == username].values[0][2]) == password:
+            role = users[users["user"] == username].values[0][3]
             session_id = str(uuid.uuid4())
             sessions[session_id] = datetime.now()
             response = RedirectResponse(url=f"/main/{username}", status_code=302)
@@ -58,6 +60,7 @@ def login(request: Request,
             return response
     elif username in users['user'].values[1]:
         if str(users[users["user"] == username].values[0][2]) == password:
+            role = users[users["user"] == username].values[0][3]
             session_id = str(uuid.uuid4())
             sessions[session_id] = datetime.now()
             response = RedirectResponse(url=f"/main/{username}", status_code=302)
@@ -103,6 +106,6 @@ def not_found_page(request: Request, exc):
     else:
         return RedirectResponse(url="/")
     
-@app.exception_handler(403)
-def not_allowed_page(request: Request, exc):
-    return RedirectResponse(url="/403")
+# @app.exception_handler(403)
+# def not_allowed_page(request: Request):
+#     return RedirectResponse(url="/403")
