@@ -1,50 +1,68 @@
-from fastapi import FastAPI, Request, Form
+import csv, os
+from datetime import timedelta, datetime
+import uuid
+import pandas as pd
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import csv, os, uuid, hashlib
-import pandas as pd
-from datetime import datetime, timedelta
+import hashlib
 
 
 app = FastAPI()
-app.mount('/static', StaticFiles(directory='static'), name = 'static')
-app.mount('/templates', StaticFiles(directory='templates'), name='templates')
-app.mount('/sources', StaticFiles(directory='sources'), name='sources')
-templates = Jinja2Templates(directory = "templates")
-USERS = 'users.csv'
-SESSION_TTL = timedelta(minutes=3)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/sources", StaticFiles(directory="sources"), name="sources")
+templates = Jinja2Templates(directory="templates")
+USERS = "users.csv"
+SESSION_TTL = timedelta(1)
 sessions = {}
 white_urls = ["/", "/login", "/logout"]
 
+def logging(func):                                               
+    def wrapper(*args, **kwargs):
+        user_func = func
+        orig = func(*args, **kwargs)
+        user_func_name = str(user_func.__name__)
+        user_name = os.getlogin()
+        time_act = str(datetime.now().time())
+        day_act =  str(datetime.now().date())
+        logs = 'logs.csv'
+        if os.path.isfile(logs):                                                                                          
+            file_df = pd.read_csv(logs)
+            data = {'': [len(file_df)], 'User': [user_name], 'Func': [user_func_name], 'Time':[time_act], 'Date':[day_act]}
+            df = pd.DataFrame(data)
+            df.to_csv('logs.csv',header=False, index=False, mode='a')
+        else:                                                                                                         
+            data = {'User': [user_name], 'Func': [user_func_name], 'Time':[time_act], 'Date':[day_act]}
+            df = pd.DataFrame(data)
+            df.to_csv('logs.csv')
+        return orig
+    return wrapper
+
+@logging
 @app.middleware("http")
 async def check_session(request: Request, call_next):
-    if request.url.path.startswith("/static") or request.url.path in ["/", "/login", "/logout"]:
+    if request.url.path.startswith("/static") or request.url.path in white_urls:
         return await call_next(request)
 
     session_id = request.cookies.get("session_id")
-    if not session_id or session_id not in sessions:
-        return RedirectResponse(url="/login")
-
-    created_at = sessions[session_id]
-    if datetime.now() - created_at > SESSION_TTL:
-        del sessions[session_id]
-        return templates.TemplateResponse("login.html", {"request" : request, "message" : "Сессия завершена по истечении времени"})
-
-    return await call_next(request)
+    if session_id not in sessions:
+        return RedirectResponse(url="/")
     
+    created_session = sessions[session_id]
+    if datetime.now() - created_session > SESSION_TTL:
+        del sessions[session_id]
+        return RedirectResponse(url="/")
 
+    return await call_next(request)   
 
+@logging
 @app.get("/", response_class=HTMLResponse)
 @app.get("/login", response_class=HTMLResponse)
 def get_login_page(request: Request):
-    try:
-        session_id = request.cookies.get("session_id")
-        del sessions[session_id]
-        return templates.TemplateResponse("login.html", {"request" : request, "message" : "Сессия завершена из-за действий пользователя"})
-    except:
-        return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request})
 
+@logging
 @app.post('/login')
 def login(request: Request,
           username: str = Form(...),
@@ -72,11 +90,13 @@ def login(request: Request,
     return templates.TemplateResponse("login.html",
                                           {'request':request,
                                            'error': 'Неверный логин'})
-    
+
+@logging
 @app.get("/main/admin", response_class=HTMLResponse)
 def get_start_page(request:Request):
     return templates.TemplateResponse("admin.html", {'request': request})
 
+@logging
 @app.get("/main/user", response_class=HTMLResponse)
 def get_start_page(request:Request):
     return templates.TemplateResponse("main.html", {'request': request})
@@ -89,14 +109,14 @@ def get_start_page(request:Request):
 def get_start_page(request:Request):
     return templates.TemplateResponse("404.html", {'request': request})
 
-@app.get("/logout")
-async def logout(request: Request):
-    session_id = request.cookies.get("session_id")
-    if session_id and session_id in sessions:
-        del sessions[session_id]
-    response = RedirectResponse(url="/")
-    response.delete_cookie("session_id")
-    return response
+@app.get("/logout", response_class=HTMLResponse)
+def logout(request: Request):
+    try:
+        session_id = request.cookies.get("session_id")
+        del sessions[session_id] 
+        return templates.TemplateResponse("login.html", {"request": request, "message": "Сессия завершена", "url": "/login"})
+    except:
+        return RedirectResponse(url=f"/", status_code=302)
 
 @app.exception_handler(404)
 def not_found_page(request: Request, exc):
@@ -106,6 +126,3 @@ def not_found_page(request: Request, exc):
     else:
         return RedirectResponse(url="/")
     
-# @app.exception_handler(403)
-# def not_allowed_page(request: Request):
-#     return RedirectResponse(url="/403")
