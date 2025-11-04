@@ -1,3 +1,2 @@
-user, hashed_password, password, role
-admin,e13321c99bc38d9688c01a9bc1e10a06a2fd1c1df63461281509742d6b482697,qwerty,admin
-user,243c9fa163caa2b187bcf94a64c6d3130227ecb25f0f12320f8bb65cdc4f8fd3,12345,user
+user,pass,hash_pass,role
+admin,qwerty,"",admin
