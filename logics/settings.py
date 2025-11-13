@@ -11,7 +11,7 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 USERS = "users.csv"
-SESSION_TTL = timedelta(10)
+SESSION_TTL = timedelta(minutes=10)  # Добавлено значение
 sessions = {}
 white_urls = ["/", "/login", "/logout"]
 hasher = hashlib.sha256()

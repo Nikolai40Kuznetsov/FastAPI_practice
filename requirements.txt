@@ -1,4 +1,6 @@
 fastapi
 uvicorn
 jinja2
-hashlib
+pandas
+selenium
+pillow
