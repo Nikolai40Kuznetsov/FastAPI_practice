@@ -10,5 +10,13 @@
     <h2>Hello, admin!</h2>  
     <img src="/sources/haker.jpg"><br>  
     <button>ТКНИ МЕНЯ</button>
+    {% if show_logout_modal %}
+    <div id="logoutModal" style="display: block; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border: 1px solid #ccc;">
+        <h3>Session Timeout Warning</h3>
+        <p>Your session has been active for 10 minutes. For security reasons, please log out.</p>
+        <button onclick="document.getElementById('logoutModal').style.display='none'">Continue</button>
+        <a href="/logout"><button>Log Out</button></a>
+    </div>
+    {% endif %}
 </body>
 </html>
